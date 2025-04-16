@@ -3,286 +3,574 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Cotton Graphic T-Shirt</title>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <title>NexusForge Pro Gaming Laptop</title>
+    <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 300ms; }
-        .custom-scrollbar::-webkit-scrollbar { height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
-        .sold-out-badge { background-color: rgba(0, 0, 0, 0.6); }
-        .option-indicator { position: absolute; bottom: 0; left: 0; right: 0; background-color: rgba(0, 0, 0, 0.7); color: white; font-size: 0.75rem; padding: 2px 4px; text-align: center; }
-        img { user-select: none; }
-        .zoom-container img { touch-action: none; }
+
+        .thumbnail-container {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+
+        .thumbnail-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .thumbnail-container::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 4px;
+        }
+
+        .thumbnail-container::-webkit-scrollbar-thumb {
+            background-color: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        .image-container {
+            overflow: hidden;
+            position: relative;
+        }
+
+        .zoomable-image {
+            transition: transform 0.1s ease-out;
+            will-change: transform;
+            cursor: zoom-in;
+        }
+
+        .zoomable-image.zoomed {
+            cursor: move;
+        }
     </style>
 </head>
-<body class="bg-gray-50 font-sans">
-<div x-data="clothingProduct()" x-cloak x-init="init()" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Product Images Section -->
-        <div class="space-y-4">
-            <!-- Main Image with Zoom -->
-            <div class="relative overflow-hidden bg-white rounded-lg shadow-sm border border-gray-200 zoom-container">
-                <div class="h-[450px] w-full flex items-center justify-center relative">
-                    <img
-                            x-ref="mainImage"
-                            :src="selectedImage"
-                            alt="Product Image"
-                            class="h-full w-auto object-contain transition-all duration-300 select-none"
-                            :style="imgStyle"
-                            @mousemove="mouseMove($event)"
-                            @mouseenter="mouseEnter($event)"
-                            @mouseleave="mouseLeave"
-                            @touchstart="touchStart($event)"
-                            @touchmove="touchMove($event)"
-                            @touchend="touchEnd"
-                            draggable="false"
-                    >
-                    <!-- Mobile zoom hint -->
-                    <div
-                            x-show="!zoomed && isTouchDevice"
-                            class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded"
-                            x-cloak
-                    >Double-tap to zoom</div>
-                    <div
-                            x-show="zoomed && isTouchDevice"
-                            class="absolute bottom-2 right-2 bg-indigo-700 text-white text-xs px-2 py-1 rounded"
-                            x-cloak
-                    >Drag to pan, double-tap to reset</div>
+<body class="bg-gray-100 font-sans">
+<div class="container mx-auto px-4 py-8" x-data="productView()" x-cloak>
+    <nav class="mb-8">
+        <ol class="flex text-sm text-gray-500">
+            <li><a href="#" class="hover:text-indigo-600">Home</a></li>
+            <li><span class="mx-2">/</span></li>
+            <li><a href="#" class="hover:text-indigo-600">Computers</a></li>
+            <li><span class="mx-2">/</span></li>
+            <li><a href="#" class="hover:text-indigo-600">Laptops</a></li>
+            <li><span class="mx-2">/</span></li>
+            <li class="text-gray-900 font-medium">NexusForge Pro Gaming Laptop</li>
+        </ol>
+    </nav>
+
+    <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+        <div class="flex flex-col lg:flex-row">
+            <!-- Product Images Section -->
+            <div class="w-full lg:w-1/2 p-6">
+                <!-- Main Image with Zoom Functionality -->
+                <div class="w-full h-80 lg:h-96 rounded-lg overflow-hidden mb-4 border border-gray-200 image-container"
+                     x-ref="imageContainer">
+                    <img :src="productCore.getSelectedImage()"
+                         x-ref="mainImage"
+                         @error="productCore.handleImageError($event)"
+                         class="w-full h-full object-cover object-center zoomable-image"
+                         :class="{'zoomed': zoomed}"
+                         :style="imgStyle"
+                         @mouseenter="mouseEnter($event)"
+                         @mousemove="mouseMove($event)"
+                         @mouseleave="mouseLeave()"
+                         @touchstart="touchStart($event)"
+                         @touchmove="touchMove($event)"
+                         @touchend="touchEnd()"
+                         alt="Product Image">
                 </div>
-            </div>
 
-            <!-- Thumbnails Navigation -->
-            <div class="relative">
-                <button @click="scrollThumbnails('left')" class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 hover:bg-gray-100" :class="{'opacity-50 cursor-not-allowed': isScrollLeftEnd, 'opacity-100': !isScrollLeftEnd}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                </button>
+                <!-- Image Navigation -->
+                <div class="relative">
+                    <button
+                            @click="scrollThumbnails('left')"
+                            class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 focus:outline-none"
+                            :class="{'opacity-50 cursor-not-allowed': isScrollLeftEnd, 'opacity-100': !isScrollLeftEnd}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
 
-                <div class="overflow-x-auto py-2 px-6 flex space-x-3 custom-scrollbar" x-ref="thumbnailsContainer" @scroll="checkScrollPosition">
-                    <!-- Main product images -->
-                    <template x-for="(image, index) in product.images" :key="'main-'+index">
-                        <div @click="selectImage(image)" :class="{ 'ring-2 ring-indigo-500': selectedImage === image, 'hover:ring-2 hover:ring-gray-300': selectedImage !== image }" class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative" >
-                            <img :src="image" :alt="`Product thumbnail ${index + 1}`" class="h-20 w-20 object-cover">
-                            <span class="option-indicator">Main</span>
-                        </div>
-                    </template>
+                    <div class="overflow-x-auto py-2 flex space-x-3 thumbnail-container"
+                         x-ref="thumbnailsContainer"
+                         @scroll="checkScrollPosition()">
 
-                    <!-- Color-specific images -->
-                    <template x-for="(color, colorIndex) in Object.keys(product.option_images.color)" :key="'color-'+colorIndex">
-                        <template x-for="(image, imageIndex) in product.option_images.color[color]" :key="'color-'+color+'-'+imageIndex">
-                            <div @click="selectImage(image); selectColor(color)" :class="{ 'ring-2 ring-indigo-500': selectedImage === image, 'hover:ring-2 hover:ring-gray-300': selectedImage !== image, 'opacity-75': selectedColor !== color, 'opacity-100 scale-105': selectedColor === color }" class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative" >
-                                <img :src="image" :alt="`${color} thumbnail`" class="h-20 w-20 object-cover">
-                                <span class="option-indicator" x-text="color"></span>
+                        <!-- Main product images -->
+                        <template x-for="(img, index) in productData.images" :key="'main-'+index">
+                            <div
+                                    @click="productCore.selectImage(img)"
+                                    :class="{ 'ring-2 ring-indigo-500': productCore.selectedImage === img, 'hover:ring-2 hover:ring-gray-300': productCore.selectedImage !== img }"
+                                    class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative"
+                                    data-thumbnail-type="main"
+                                    :id="'thumbnail-main-'+index">
+                                <img :src="img" :alt="`Product thumbnail ${index + 1}`"
+                                     class="h-20 w-20 object-cover"
+                                     @error="productCore.handleImageError($event)">
+                                <span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center">Main</span>
                             </div>
                         </template>
-                    </template>
 
-                    <!-- Design-specific images -->
-                    <template x-for="(design, designIndex) in Object.keys(product.option_images.design)" :key="'design-'+designIndex">
-                        <template x-for="(image, imageIndex) in product.option_images.design[design]" :key="'design-'+design+'-'+imageIndex">
-                            <div @click="selectImage(image); selectDesign(design)" :class="{ 'ring-2 ring-indigo-500': selectedImage === image, 'hover:ring-2 hover:ring-gray-300': selectedImage !== image, 'opacity-75': selectedDesign !== design, 'opacity-100 scale-105': selectedDesign === design }" class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative" >
-                                <img :src="image" :alt="`${design} thumbnail`" class="h-20 w-20 object-cover">
-                                <span class="option-indicator" x-text="design"></span>
-                            </div>
-                        </template>
-                    </template>
-
-                    <!-- Variant-specific images -->
-                    <template x-for="(key, keyIndex) in Object.keys(product.variant_images)" :key="'variant-'+keyIndex">
-                        <template x-if="Array.isArray(product.variant_images[key])">
-                            <template x-for="(image, imageIndex) in product.variant_images[key]" :key="'variant-'+key+'-'+imageIndex">
-                                <div @click="selectImage(image); selectVariantFromKey(key)" :class="{ 'ring-2 ring-indigo-500': selectedImage === image, 'hover:ring-2 hover:ring-gray-300': selectedImage !== image }" class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative" >
-                                    <img :src="image" :alt="`Variant thumbnail`" class="h-20 w-20 object-cover">
-                                    <span class="option-indicator" x-text="key.replace('|', ' + ')"></span>
-                                </div>
+                        <!-- Option-specific images -->
+                        <template x-if="productData.option_images">
+                            <template x-for="(optionValues, optionType) in productData.option_images" :key="'option-'+optionType">
+                                <template x-for="(images, optionValue) in optionValues" :key="'option-'+optionType+'-'+optionValue">
+                                    <template x-for="(img, imgIndex) in images" :key="'option-'+optionType+'-'+optionValue+'-'+imgIndex">
+                                        <div
+                                                @click="selectImageAndOption(img, optionType, optionValue)"
+                                                :class="{ 'ring-2 ring-indigo-500': productCore.selectedImage === img,
+                                                         'hover:ring-2 hover:ring-gray-300': productCore.selectedImage !== img,
+                                                         'opacity-75': productCore.selectedOptions[optionType] !== optionValue,
+                                                         'opacity-100 scale-105': productCore.selectedOptions[optionType] === optionValue }"
+                                                class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative"
+                                                data-thumbnail-type="option"
+                                                :data-option-type="optionType"
+                                                :data-option-value="optionValue"
+                                                :id="'thumbnail-option-'+optionType+'-'+optionValue+'-'+imgIndex">
+                                            <img :src="img" :alt="`${optionValue} thumbnail`"
+                                                 class="h-20 w-20 object-cover"
+                                                 @error="productCore.handleImageError($event)">
+                                            <span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center" x-text="optionValue"></span>
+                                        </div>
+                                    </template>
+                                </template>
                             </template>
                         </template>
-                        <template x-if="!Array.isArray(product.variant_images[key])">
-                            <div @click="selectImage(product.variant_images[key]); selectVariantFromKey(key)" :class="{ 'ring-2 ring-indigo-500': selectedImage === product.variant_images[key], 'hover:ring-2 hover:ring-gray-300': selectedImage !== product.variant_images[key] }" class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative" >
-                                <img :src="product.variant_images[key]" :alt="`Variant thumbnail`" class="h-20 w-20 object-cover">
-                                <span class="option-indicator" x-text="key.replace('|', ' + ')"></span>
-                            </div>
+
+                        <!-- Variant-specific images -->
+                        <template x-if="productData.variant_images">
+                            <template x-for="(value, key) in productData.variant_images" :key="'variant-'+key">
+                                <template x-if="Array.isArray(value)">
+                                    <template x-for="(img, imgIndex) in value" :key="'variant-'+key+'-'+imgIndex">
+                                        <div
+                                                @click="selectImageAndVariant(img, key)"
+                                                :class="{ 'ring-2 ring-indigo-500': productCore.selectedImage === img, 'hover:ring-2 hover:ring-gray-300': productCore.selectedImage !== img }"
+                                                class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative"
+                                                data-thumbnail-type="variant"
+                                                :data-variant-key="key"
+                                                :id="'thumbnail-variant-'+key+'-'+imgIndex">
+                                            <img :src="img" :alt="`Variant thumbnail`"
+                                                 class="h-20 w-20 object-cover"
+                                                 @error="productCore.handleImageError($event)">
+                                            <span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center" x-text="formatVariantName(key)"></span>
+                                        </div>
+                                    </template>
+                                </template>
+                                <template x-if="!Array.isArray(value)">
+                                    <div
+                                            @click="selectImageAndVariant(value, key)"
+                                            :class="{ 'ring-2 ring-indigo-500': productCore.selectedImage === value, 'hover:ring-2 hover:ring-gray-300': productCore.selectedImage !== value }"
+                                            class="flex-shrink-0 cursor-pointer rounded-md overflow-hidden transition-all duration-200 transform hover:scale-105 relative"
+                                            data-thumbnail-type="variant"
+                                            :data-variant-key="key"
+                                            :id="'thumbnail-variant-'+key+'-single'">
+                                        <img :src="value" :alt="`Variant thumbnail`"
+                                             class="h-20 w-20 object-cover"
+                                             @error="productCore.handleImageError($event)">
+                                        <span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center" x-text="formatVariantName(key)"></span>
+                                    </div>
+                                </template>
+                            </template>
                         </template>
-                    </template>
+                    </div>
+
+                    <button
+                            @click="scrollThumbnails('right')"
+                            class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 focus:outline-none"
+                            :class="{'opacity-50 cursor-not-allowed': isScrollRightEnd, 'opacity-100': !isScrollRightEnd}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
                 </div>
 
-                <button @click="scrollThumbnails('right')" class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-white p-2 rounded-full shadow-md z-10 hover:bg-gray-100" :class="{'opacity-50 cursor-not-allowed': isScrollRightEnd, 'opacity-100': !isScrollRightEnd}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </button>
+                <!-- Zoom Instructions -->
+                <div class="mt-4 text-center text-sm text-gray-500">
+                    <span x-show="isTouchDevice" class="block">Double-tap to zoom. Drag to move when zoomed.</span>
+                    <span x-show="!isTouchDevice" class="block">Hover to zoom. Mouse over different areas to explore details.</span>
+                </div>
             </div>
-        </div>
 
-        <!-- Product Details Section -->
-        <div class="space-y-6">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900" x-text="product.name"></h1>
-                <div class="mt-2 flex items-center">
-                    <div class="flex items-center">
-                        <template x-for="i in 5">
-                            <svg :class="{'text-yellow-400': i <= Math.round(product.rating), 'text-gray-300': i > Math.round(product.rating)}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            <!-- Product Details Section -->
+            <div class="w-full lg:w-1/2 p-6 lg:border-l border-gray-200">
+                <div class="mb-4 flex justify-between items-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" x-show="productData.isFeatured">
+                            Featured
+                        </span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800" x-show="productData.isOnSale">
+                            On Sale
+                        </span>
+                </div>
+
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2" x-text="productData.name"></h1>
+
+                <div class="flex items-center mb-4">
+                    <div class="flex">
+                        <template x-for="i in 5" :key="i">
+                            <svg class="w-5 h-5" :class="i <= Math.round(productData.rating) ? 'text-yellow-400' : 'text-gray-300'" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                             </svg>
                         </template>
-                        <span class="ml-2 text-sm text-gray-600" x-text="`${product.rating} (${product.reviews_count} reviews)`"></span>
+                    </div>
+                    <span class="ml-2 text-gray-600" x-text="`${productData.rating} (${productData.reviews_count} reviews)`"></span>
+                    <span class="ml-4 text-sm text-gray-500">Brand: <span class="text-gray-700" x-text="productData.brand"></span></span>
+                </div>
+
+                <p class="text-gray-700 mb-6" x-text="productData.description"></p>
+
+                <div class="mb-6">
+                    <p class="text-3xl font-bold text-gray-900" x-text="formatPrice(productCore.calculateCurrentPrice())"></p>
+                    <p class="text-sm text-gray-500">SKU: <span x-text="productData.sku"></span></p>
+                </div>
+
+                <!-- Options Selection -->
+                <div class="space-y-6 mb-8">
+                    <template x-for="(values, option) in productData.options" :key="option">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 capitalize mb-2" x-text="formatOptionName(option)"></label>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="(value, idx) in values" :key="idx">
+                                    <button
+                                            class="px-3 py-2 border rounded-md text-sm hover:border-indigo-500 transition"
+                                            :class="productCore.selectedOptions[option] === value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 text-gray-700'"
+                                            @click="selectOption(option, value)"
+                                            x-text="value">
+                                    </button>
+                                </template>
+                            </div>
+
+                            <template x-if="option in productData.option_price_adjustments">
+                                <div class="mt-1 text-xs text-gray-500">
+                                    <template x-for="(adjustment, value) in productData.option_price_adjustments[option]" :key="value">
+                                            <span x-show="adjustment !== 0" class="mr-2">
+                                                <span x-text="value"></span>:
+                                                <span x-text="adjustment > 0 ? '+' + formatPrice(adjustment) : formatPrice(adjustment)"></span>
+                                            </span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Availability and Shipping -->
+                <div class="space-y-3 mb-8">
+                    <div class="flex items-center">
+                        <span class="mr-2 text-sm font-medium text-gray-700">Availability:</span>
+                        <template x-if="productCore.getInventoryForSelection() > 0">
+                            <span class="text-green-600 font-medium" x-text="`${productCore.getInventoryForSelection()} in stock`"></span>
+                        </template>
+                        <template x-if="productCore.getInventoryForSelection() <= 0">
+                            <span class="text-red-600 font-medium">Out of stock</span>
+                        </template>
+                    </div>
+
+                    <div class="flex items-center">
+                        <span class="mr-2 text-sm font-medium text-gray-700">Shipping:</span>
+                        <span class="text-gray-600" x-text="productCore.getShippingInfo()"></span>
+                    </div>
+
+                    <div class="flex items-center" x-show="productData.weight && productData.dimensions">
+                        <span class="mr-2 text-sm font-medium text-gray-700">Weight:</span>
+                        <span class="text-gray-600" x-text="`${productData.weight.value} ${productData.weight.unit}`"></span>
+                        <span class="mx-2 text-gray-400">|</span>
+                        <span class="mr-2 text-sm font-medium text-gray-700">Dimensions:</span>
+                        <span class="text-gray-600" x-text="`${productData.dimensions.length} × ${productData.dimensions.width} × ${productData.dimensions.height} ${productData.dimensions.unit}`"></span>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <p class="text-xl font-medium text-indigo-600">$<span x-text="formatPrice(calculatePrice())"></span>
-                        <span x-show="isOnSale" class="ml-2 text-sm text-gray-500 line-through">$<span x-text="formatPrice(product.base_price)"></span></span>
-                    </p>
-                    <span x-show="!isVariantAvailable()" class="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-              Sold Out
-            </span>
-                    <span x-show="isVariantAvailable() && currentStock() <= product.lowStockThreshold && currentStock() > 0" class="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-              Only <span x-text="currentStock()"></span> left!
-            </span>
+
+                <!-- Add to Cart Button -->
+                <div class="mb-8">
+                    <button
+                            class="w-full bg-indigo-600 text-white py-3 px-6 rounded-md hover:bg-indigo-700 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                            :class="{'opacity-50 cursor-not-allowed': productCore.getInventoryForSelection() <= 0}"
+                            :disabled="productCore.getInventoryForSelection() <= 0">
+                        Add to Cart
+                    </button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="border-t border-b border-gray-200 py-4">
-                <p class="text-gray-700 leading-relaxed" x-text="product.description"></p>
-            </div>
-
-            <!-- Size Options -->
-            <div>
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-medium text-gray-900">Size</h2>
-                    <span class="text-sm text-gray-500" x-text="selectedSize"></span>
+    <!-- Product Features -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Features & Specifications</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <template x-for="(value, key) in productData.features" :key="key">
+                <div class="flex">
+                    <svg class="h-5 w-5 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>
+                            <span class="font-medium text-gray-700" x-text="formatFeatureKey(key)"></span>:
+                            <span class="text-gray-600" x-text="value"></span>
+                        </span>
                 </div>
-                <div class="mt-3 grid grid-cols-6 gap-3">
-                    <template x-for="size in product.options.size" :key="size">
-                        <button @click="selectSize(size)" :class="{ 'bg-indigo-600 text-white': selectedSize === size && isSizeAvailable(size), 'bg-white text-gray-900 border-gray-200': selectedSize !== size && isSizeAvailable(size), 'bg-gray-200 text-gray-500 cursor-not-allowed': !isSizeAvailable(size), 'border-red-300': selectedSize === size && !isVariantAvailable() }" class="border rounded-md py-3 px-3 flex items-center justify-center text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 relative" :disabled="!isSizeAvailable(size)" >
-                            <span x-text="size.toUpperCase()"></span>
-                            <span x-show="!isSizeAvailable(size)" class="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-60">
-                  <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Color Options -->
-            <div>
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-medium text-gray-900">Color</h2>
-                    <span class="text-sm text-gray-500 capitalize" x-text="selectedColor"></span>
-                </div>
-                <div class="mt-3 grid grid-cols-4 gap-3">
-                    <template x-for="color in product.options.color" :key="color">
-                        <button @click="selectColor(color)" :class="{ 'ring-2 ring-offset-2 ring-indigo-500': selectedColor === color && isColorAvailable(color), 'ring-1 ring-offset-1 ring-gray-200': selectedColor !== color && isColorAvailable(color), 'opacity-50 cursor-not-allowed': !isColorAvailable(color), 'ring-2 ring-offset-2 ring-red-300': selectedColor === color && !isVariantAvailable() }" class="rounded-full p-1 flex items-center justify-center focus:outline-none relative" :disabled="!isColorAvailable(color)" >
-                            <span class="h-8 w-8 rounded-full border" :style="{ backgroundColor: getColorHex(color), borderColor: color === 'white' ? '#e5e7eb' : getColorHex(color) }"></span>
-                            <span x-show="!isColorAvailable(color)" class="absolute inset-0 flex items-center justify-center">
-                  <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Design Options -->
-            <div>
-                <div class="flex items-center justify-between">
-                    <h2 class="text-sm font-medium text-gray-900">Design</h2>
-                    <span class="text-sm text-gray-500 capitalize" x-text="selectedDesign"></span>
-                </div>
-                <div class="mt-3 grid grid-cols-2 gap-3">
-                    <template x-for="design in product.options.design" :key="design">
-                        <button @click="selectDesign(design)" :class="{ 'bg-indigo-600 text-white': selectedDesign === design && isDesignAvailable(design), 'bg-white text-gray-900 border-gray-200': selectedDesign !== design && isDesignAvailable(design), 'bg-gray-200 text-gray-500 cursor-not-allowed': !isDesignAvailable(design), 'border-red-300': selectedDesign === design && !isVariantAvailable() }" class="border rounded-md py-3 px-3 flex items-center justify-center text-sm font-medium capitalize hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 relative" :disabled="!isDesignAvailable(design)" >
-                            <span x-text="design"></span>
-                            <span x-show="!isDesignAvailable(design)" class="absolute inset-0 flex items-center justify-center bg-gray-200 bg-opacity-60">
-                  <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </span>
-                        </button>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Inventory Status -->
-            <div x-show="isVariantAvailable()" class="flex items-center space-x-2">
-                <svg class="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                <span class="text-sm text-gray-700">
-            In stock
-            <span x-show="currentStock() <= product.lowStockThreshold" class="font-medium">
-              (<span x-text="currentStock()"></span> available)
-            </span>
-          </span>
-            </div>
-            <div x-show="!isVariantAvailable()" class="flex items-center space-x-2">
-                <svg class="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-                <span class="text-sm text-gray-700">Out of stock</span>
-            </div>
-
-            <!-- Features -->
-            <div class="border-t pt-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-2">Features</h3>
-                <ul class="list-disc pl-5 space-y-1">
-                    <template x-for="(value, key) in product.features" :key="key">
-                        <li class="text-sm text-gray-700">
-                            <span class="font-medium capitalize" x-text="key + ':'"></span>
-                            <span x-text="value"></span>
-                        </li>
-                    </template>
-                </ul>
-            </div>
-
-            <!-- Shipping Info -->
-            <div class="border-t pt-4 flex justify-between items-center">
-                <div>
-                    <h3 class="text-sm font-medium text-gray-900">Shipping</h3>
-                    <template x-if="product.free_shipping">
-                        <p class="text-sm text-green-600 font-medium">Free Shipping</p>
-                    </template>
-                    <template x-if="!product.free_shipping">
-                        <p class="text-sm text-gray-600" x-text="getShippingInfo()"></p>
-                    </template>
-                </div>
-                <span class="text-sm text-gray-500" x-text="product.brand"></span>
-            </div>
-
-            <!-- Add to Cart Button -->
-            <div class="mt-8">
-                <button type="button" class="w-full bg-indigo-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" :class="{'hover:bg-indigo-700': isVariantAvailable(), 'opacity-50 cursor-not-allowed': !isVariantAvailable()}" :disabled="!isVariantAvailable()">
-                    <span x-show="isVariantAvailable()">Add to cart</span>
-                    <span x-show="!isVariantAvailable()">Sold Out</span>
-                </button>
-            </div>
+            </template>
         </div>
     </div>
 </div>
 
 <script>
-    function clothingProduct() {
+    // Product View Core Class
+    class ProductViewCore {
+        constructor(product) {
+            this.product = product;
+            this.selectedImage = '';
+            this.selectedOptions = {};
+
+            this.initialize();
+        }
+
+        // Initialize product data
+        initialize() {
+            if (this.product) {
+                // Initialize selected image
+                this.selectedImage = this.product.images && this.product.images.length > 0
+                    ? this.product.images[0]
+                    : '';
+
+                // Initialize selected options
+                this.selectedOptions = {};
+                if (this.product.options) {
+                    for (const option in this.product.options) {
+                        if (this.product.options[option] && this.product.options[option].length > 0) {
+                            this.selectedOptions[option] = this.product.options[option][0];
+                        }
+                    }
+                }
+            }
+        }
+
+        // Format price
+        formatPrice(price) {
+            return '$' + parseFloat(price).toFixed(2);
+        }
+
+        // Format option name
+        formatOptionName(name) {
+            return name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+        }
+
+        // Format feature key
+        formatFeatureKey(key) {
+            return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+        }
+
+        // Format variant name
+        formatVariantName(variant) {
+            return variant
+                .split('|')
+                .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' + ');
+        }
+
+        // Calculate current price based on selected options
+        calculateCurrentPrice() {
+            if (!this.product) return 0;
+
+            let price = parseFloat(this.product.base_price);
+
+            // Add option price adjustments
+            if (this.product.option_price_adjustments) {
+                for (const option in this.selectedOptions) {
+                    const value = this.selectedOptions[option];
+                    if (
+                        this.product.option_price_adjustments[option] &&
+                        this.product.option_price_adjustments[option][value] !== undefined
+                    ) {
+                        price += parseFloat(this.product.option_price_adjustments[option][value]);
+                    }
+                }
+            }
+
+            return price;
+        }
+
+        // Get shipping information
+        getShippingInfo() {
+            if (!this.product) return '';
+
+            if (this.product.free_shipping) {
+                return "Free Shipping";
+            }
+
+            let shippingCost = parseFloat(this.product.base_shipping_cost);
+
+            // Add shipping adjustments
+            if (this.product.option_shipping_adjustments) {
+                for (const option in this.selectedOptions) {
+                    const value = this.selectedOptions[option];
+                    if (
+                        this.product.option_shipping_adjustments[option] &&
+                        this.product.option_shipping_adjustments[option][value] !== undefined
+                    ) {
+                        shippingCost += parseFloat(this.product.option_shipping_adjustments[option][value]);
+                    }
+                }
+            }
+
+            if (shippingCost <= 0) {
+                return "Free Shipping";
+            }
+
+            return `$${shippingCost.toFixed(2)} Shipping`;
+        }
+
+        // Get inventory for current selection
+        getInventoryForSelection() {
+            if (!this.product) return 0;
+
+            if (!this.product.hasVariants) {
+                return this.product.stock;
+            }
+
+            const parts = [];
+            let complete = true;
+
+            for (const option in this.product.options) {
+                if (!this.selectedOptions[option]) {
+                    complete = false;
+                    break;
+                }
+                parts.push(this.selectedOptions[option]);
+            }
+
+            if (!complete) return 0;
+
+            const key = parts.join('|');
+            return this.product.option_variants_stock[key] || 0;
+        }
+
+        // Get selected image based on options
+        getSelectedImage() {
+            if (!this.product) return '';
+
+            try {
+                // If an image has been manually selected, use that
+                if (this.selectedImage) {
+                    return this.selectedImage;
+                }
+
+                // Check if there's a specific variant image
+                if (this.product.variant_images) {
+                    // Build a key from selected options
+                    const parts = [];
+                    for (const option in this.selectedOptions) {
+                        parts.push(this.selectedOptions[option]);
+                    }
+
+                    if (parts.length > 0) {
+                        const variantKey = parts.join('|');
+                        if (this.product.variant_images[variantKey]) {
+                            const variantImage = this.product.variant_images[variantKey];
+                            return Array.isArray(variantImage) ? variantImage[0] : variantImage;
+                        }
+                    }
+                }
+
+                // Check for option-specific images
+                if (this.product.option_images) {
+                    for (const option in this.selectedOptions) {
+                        const value = this.selectedOptions[option];
+                        if (
+                            this.product.option_images[option] &&
+                            this.product.option_images[option][value] &&
+                            this.product.option_images[option][value].length > 0
+                        ) {
+                            return this.product.option_images[option][value][0];
+                        }
+                    }
+                }
+
+                // Default to first product image
+                return this.product.images && this.product.images.length > 0
+                    ? this.product.images[0]
+                    : '';
+
+            } catch (error) {
+                console.error("Error in getSelectedImage:", error);
+                return this.product.images && this.product.images.length > 0
+                    ? this.product.images[0]
+                    : '';
+            }
+        }
+
+        // Get image for a specific option
+        getImageForOption(optionType, optionValue) {
+            if (!this.product || !this.product.option_images) return null;
+
+            if (this.product.option_images[optionType] &&
+                this.product.option_images[optionType][optionValue] &&
+                this.product.option_images[optionType][optionValue].length > 0) {
+                return this.product.option_images[optionType][optionValue][0];
+            }
+
+            return null;
+        }
+
+        // Get image for a specific variant
+        getImageForVariant(variantKey) {
+            if (!this.product || !this.product.variant_images) return null;
+
+            if (this.product.variant_images[variantKey]) {
+                const variantImage = this.product.variant_images[variantKey];
+                return Array.isArray(variantImage) ? variantImage[0] : variantImage;
+            }
+
+            return null;
+        }
+
+        // Image selection
+        selectImage(image) {
+            this.selectedImage = image;
+        }
+
+        // Option selection
+        selectOption(option, value) {
+            this.selectedOptions[option] = value;
+            // Reset selected image to force selection based on variant
+            this.selectedImage = '';
+        }
+
+        // Select option from image
+        selectOptionFromImage(optionType, optionValue) {
+            this.selectedOptions[optionType] = optionValue;
+        }
+
+        // Select variant from key
+        selectVariantFromKey(key) {
+            const parts = key.split('|');
+            const optionNames = Object.keys(this.product.options);
+
+            for (let i = 0; i < Math.min(parts.length, optionNames.length); i++) {
+                this.selectedOptions[optionNames[i]] = parts[i];
+            }
+        }
+
+        // Handle image errors
+        handleImageError(event) {
+            event.target.src = "https://via.placeholder.com/400x300?text=Image+Not+Available";
+        }
+    }
+
+    // Alpine.js Component
+    function productView() {
         return {
-            product: {
+            productData: {
                 // Basic Information
-                id: 2501,
-                name: "Premium Cotton Graphic T-Shirt",
-                description: "Ultra-soft premium cotton t-shirt with original graphic designs. Pre-shrunk fabric with modern fit and reinforced stitching for durability.",
-                base_price: 24.99,
-                base_shipping_cost: 4.99,
+                id: 3001,
+                name: "NexusForge Pro Gaming Laptop",
+                description: "Professional-grade gaming laptop with customizable configuration. Built for esports professionals and hardcore gamers with cutting-edge performance, advanced cooling system, and premium display options.",
+                base_price: 1499.99,
+                base_shipping_cost: 29.99,
                 free_shipping: false,
-                sku: "APPRL-TS-2501",
-                slug: "premium-cotton-graphic-tshirt",
-                brand: "Urban Threads",
-                rating: 4.8,
-                reviews_count: 236,
+                sku: "COMP-LAPTOP-3001",
+                slug: "nexusforge-pro-gaming-laptop",
+                brand: "NexusForge",
+                rating: 4.9,
+                reviews_count: 324,
 
                 // Status Information
                 status: "active",
@@ -292,156 +580,187 @@
 
                 // Stock Management
                 requiresInventoryTracking: true,
-                stock: 25, // Default stock for Medium White Mountain design
+                stock: 0, // Must configure
                 hasVariants: true,
-                totalVariantStock: 485,
-                lowStockThreshold: 10,
+                totalVariantStock: 124,
+                lowStockThreshold: 5,
 
                 // Product Details
                 features: {
-                    material: "100% Ringspun Cotton, 180gsm",
-                    fit: "Modern fit, slightly tapered",
-                    neckline: "Reinforced crew neck",
-                    care: "Machine wash cold, tumble dry low",
-                    printing: "Water-based eco-friendly inks",
-                    origin: "Ethically manufactured",
-                    sustainability: "GOTS certified organic cotton"
+                    chassis: "Aircraft-grade aluminum",
+                    cooling: "Advanced dual-fan cooling system with copper heat pipes",
+                    keyboard: "Per-key RGB mechanical keyboard",
+                    audio: "3D surround sound with AI noise cancellation",
+                    battery: "Up to 6 hours gaming, 10 hours productivity",
+                    webcam: "1080p with privacy shutter",
+                    connectivity: "Wi-Fi 6E, Bluetooth 5.3, Thunderbolt 4",
+                    warranty: "3-year premium support"
                 },
 
-                // Main product images
+                // Images
                 images: [
-                    "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=800&auto=format&fit=crop",
-                    "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800&auto=format&fit=crop"
+                    "https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800&auto=format&fit=crop",
+                    "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=800&auto=format&fit=crop",
+                    "https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800&auto=format&fit=crop",
+                    "https://images.unsplash.com/photo-1482235225574-c37692835cf3?w=800&auto=format&fit=crop"
                 ],
 
                 // Product Configuration
                 options: {
-                    "size": ["xs", "s", "m", "l", "xl", "2xl"],
-                    "color": ["white", "black", "navy", "heather gray"],
-                    "design": ["mountain", "wave", "sunset", "minimal"]
+                    "processor": ["intel i7-14700H", "intel i9-14900HX", "amd ryzen 9 7950X"],
+                    "graphics": ["nvidia rtx 4070 8GB", "nvidia rtx 4080 12GB", "nvidia rtx 4090 16GB"],
+                    "ram": ["16GB DDR5", "32GB DDR5", "64GB DDR5"],
+                    "storage": ["512GB NVMe", "1TB NVMe", "2TB NVMe", "4TB NVMe"],
+                    "display": ["15.6\" FHD 144Hz", "15.6\" QHD 240Hz", "17.3\" FHD 144Hz", "17.3\" QHD 240Hz"],
+                    "os": ["windows 11 home", "windows 11 pro"]
                 },
 
                 // Option Images
                 option_images: {
-                    "color": {
-                        "white": ["https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800&auto=format&fit=crop"],
-                        "black": ["https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=800&auto=format&fit=crop"],
-                        "navy": ["https://images.unsplash.com/photo-1618354691438-25bc04584c23?w=800&auto=format&fit=crop"],
-                        "heather gray": ["https://images.unsplash.com/photo-1618354691229-a8f91e7a3eb9?w=800&auto=format&fit=crop"]
+                    "processor": {
+                        "intel i9-14900HX": ["https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&auto=format&fit=crop"],
+                        "amd ryzen 9 7950X": ["https://images.unsplash.com/photo-1562408590-e32931084e23?w=800&auto=format&fit=crop"]
                     },
-                    "design": {
-                        "mountain": ["https://images.unsplash.com/photo-1564412811189-a6d55a176f6c?w=800&auto=format&fit=crop"],
-                        "wave": ["https://images.unsplash.com/photo-1533577116850-9cc66cad8a9b?w=800&auto=format&fit=crop"],
-                        "sunset": ["https://images.unsplash.com/photo-1549880338-65ddcdfd017b?w=800&auto=format&fit=crop"],
-                        "minimal": ["https://images.unsplash.com/photo-1567632661587-deaffec88b38?w=800&auto=format&fit=crop"]
+                    "graphics": {
+                        "nvidia rtx 4080 12GB": ["https://images.unsplash.com/photo-1555618568-bdf0a992c512?w=800&auto=format&fit=crop"],
+                        "nvidia rtx 4090 16GB": ["https://images.unsplash.com/photo-1551643556-0e32e07d70dd?w=800&auto=format&fit=crop"]
+                    },
+                    "display": {
+                        "15.6\" QHD 240Hz": ["https://images.unsplash.com/photo-1551883040-0256b70c6ee9?w=800&auto=format&fit=crop"],
+                        "17.3\" QHD 240Hz": ["https://images.unsplash.com/photo-1533740566848-5f7d3e04e3d7?w=800&auto=format&fit=crop"]
                     }
                 },
 
-                // Variant Images - Images for specific combinations of options
+                // Variant Images
                 variant_images: {
-                    "white|mountain": "https://images.unsplash.com/photo-1527719327859-c6ce80353573?w=800&auto=format&fit=crop",
-                    "black|mountain": "https://images.unsplash.com/photo-1503342394128-c104d54dba01?w=800&auto=format&fit=crop",
-                    "white|wave": "https://images.unsplash.com/photo-1574180566232-aaad1b5b8450?w=800&auto=format&fit=crop",
-                    "navy|sunset": ["https://images.unsplash.com/photo-1622445275463-afa2ab738c34?w=800&auto=format&fit=crop", "https://images.unsplash.com/photo-1622445275576-721325763afe?w=800&auto=format&fit=crop"],
-                    "heather gray|minimal": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=800&auto=format&fit=crop"
+                    "intel i9-14900HX|nvidia rtx 4090 16GB|17.3\" QHD 240Hz": [
+                        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?w=800&auto=format&fit=crop"
+                    ],
+                    "amd ryzen 9 7950X|nvidia rtx 4080 12GB|15.6\" QHD 240Hz": "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop"
                 },
 
                 // Option Variants Stock
                 option_variants_stock: {
-                    "xs|white|mountain": 20,
-                    "s|white|mountain": 30,
-                    "m|white|mountain": 25,
-                    "l|white|mountain": 20,
-                    "xl|white|mountain": 15,
-                    "2xl|white|mountain": 10,
-                    "xs|black|mountain": 15,
-                    "s|black|mountain": 25,
-                    "m|black|mountain": 30,
-                    "l|black|mountain": 25,
-                    "xl|black|mountain": 15,
-                    "2xl|black|mountain": 10,
-                    "xs|navy|mountain": 10,
-                    "s|navy|mountain": 15,
-                    "m|navy|mountain": 20,
-                    "l|navy|mountain": 15,
-                    "xl|navy|mountain": 10,
-                    "2xl|navy|mountain": 5,
-                    "xs|white|wave": 10,
-                    "s|white|wave": 15,
-                    "m|white|wave": 20,
-                    "l|white|wave": 15,
-                    "xl|white|wave": 10,
-                    "2xl|white|wave": 5,
-                    "s|black|wave": 10,
-                    "m|black|wave": 15,
-                    "l|black|wave": 15,
-                    "xl|black|wave": 10,
-                    "s|navy|sunset": 10,
-                    "m|navy|sunset": 15,
-                    "l|navy|sunset": 15,
-                    "xl|navy|sunset": 10,
-                    "s|heather gray|minimal": 15,
-                    "m|heather gray|minimal": 20,
-                    "l|heather gray|minimal": 15,
-                    "xl|heather gray|minimal": 10
+                    // Base models with i7 processor
+                    "intel i7-14700H|nvidia rtx 4070 8GB|16GB DDR5|512GB NVMe|15.6\" FHD 144Hz|windows 11 home": 15,
+                    "intel i7-14700H|nvidia rtx 4070 8GB|16GB DDR5|1TB NVMe|15.6\" FHD 144Hz|windows 11 home": 12,
+                    "intel i7-14700H|nvidia rtx 4070 8GB|32GB DDR5|1TB NVMe|15.6\" FHD 144Hz|windows 11 home": 10,
+                    "intel i7-14700H|nvidia rtx 4070 8GB|32GB DDR5|1TB NVMe|15.6\" QHD 240Hz|windows 11 home": 8,
+
+                    // Mid-tier models with i9 processor
+                    "intel i9-14900HX|nvidia rtx 4080 12GB|32GB DDR5|1TB NVMe|15.6\" QHD 240Hz|windows 11 home": 10,
+                    "intel i9-14900HX|nvidia rtx 4080 12GB|32GB DDR5|2TB NVMe|15.6\" QHD 240Hz|windows 11 home": 8,
+                    "intel i9-14900HX|nvidia rtx 4080 12GB|32GB DDR5|2TB NVMe|15.6\" QHD 240Hz|windows 11 pro": 6,
+                    "intel i9-14900HX|nvidia rtx 4080 12GB|32GB DDR5|2TB NVMe|17.3\" QHD 240Hz|windows 11 pro": 5,
+
+                    // High-end models with i9 and RTX 4090
+                    "intel i9-14900HX|nvidia rtx 4090 16GB|32GB DDR5|2TB NVMe|17.3\" QHD 240Hz|windows 11 pro": 7,
+                    "intel i9-14900HX|nvidia rtx 4090 16GB|64GB DDR5|2TB NVMe|17.3\" QHD 240Hz|windows 11 pro": 4,
+                    "intel i9-14900HX|nvidia rtx 4090 16GB|64GB DDR5|4TB NVMe|17.3\" QHD 240Hz|windows 11 pro": 2,
+
+                    // AMD models
+                    "amd ryzen 9 7950X|nvidia rtx 4070 8GB|32GB DDR5|1TB NVMe|15.6\" FHD 144Hz|windows 11 home": 8,
+                    "amd ryzen 9 7950X|nvidia rtx 4080 12GB|32GB DDR5|1TB NVMe|15.6\" QHD 240Hz|windows 11 home": 6,
+                    "amd ryzen 9 7950X|nvidia rtx 4080 12GB|32GB DDR5|2TB NVMe|15.6\" QHD 240Hz|windows 11 pro": 5,
+                    "amd ryzen 9 7950X|nvidia rtx 4090 16GB|64GB DDR5|2TB NVMe|17.3\" QHD 240Hz|windows 11 pro": 3
                 },
 
                 // Option Price Adjustments
                 option_price_adjustments: {
-                    "size:xl": 2.00,
-                    "size:2xl": 4.00,
-                    "color:heather gray": 1.50,
-                    "design:sunset": 2.00
+                    "processor": {
+                        "intel i9-14900HX": 300.00,
+                        "amd ryzen 9 7950X": 250.00
+                    },
+                    "graphics": {
+                        "nvidia rtx 4080 12GB": 300.00,
+                        "nvidia rtx 4090 16GB": 800.00
+                    },
+                    "ram": {
+                        "32GB DDR5": 150.00,
+                        "64GB DDR5": 400.00
+                    },
+                    "storage": {
+                        "1TB NVMe": 100.00,
+                        "2TB NVMe": 250.00,
+                        "4TB NVMe": 500.00
+                    },
+                    "display": {
+                        "15.6\" QHD 240Hz": 200.00,
+                        "17.3\" FHD 144Hz": 150.00,
+                        "17.3\" QHD 240Hz": 350.00
+                    },
+                    "os": {
+                        "windows 11 pro": 100.00
+                    }
                 },
 
-                // Option Shipping Adjustments
+                // Option Shipping Cost Adjustments
                 option_shipping_adjustments: {
-                    "size:xl": 2.00,
-                    "size:2xl": 3.50
+                    "display": {
+                        "17.3\" FHD 144Hz": 10.00,
+                        "17.3\" QHD 240Hz": 10.00
+                    }
                 },
 
                 // Physical Attributes
                 weight: {
-                    value: 0.22,
+                    value: 2.2,
                     unit: 'kg'
                 },
                 dimensions: {
-                    length: 30,
-                    width: 25,
+                    length: 36,
+                    width: 26,
                     height: 2,
                     unit: 'cm'
                 },
 
                 // Option Dimension Overrides
                 option_dimension_overrides: {
-                    "size:2xl": {
-                        weight: { value: 0.28, unit: 'kg' },
-                        dimensions: { length: 35, width: 30, height: 2, unit: 'cm' }
+                    "display": {
+                        "17.3\" FHD 144Hz": {
+                            weight: {
+                                value: 2.5,
+                                unit: 'kg'
+                            },
+                            dimensions: {
+                                length: 40,
+                                width: 28,
+                                height: 2.2,
+                                unit: 'cm'
+                            }
+                        },
+                        "17.3\" QHD 240Hz": {
+                            weight: {
+                                value: 2.6,
+                                unit: 'kg'
+                            },
+                            dimensions: {
+                                length: 40,
+                                width: 28,
+                                height: 2.3,
+                                unit: 'cm'
+                            }
+                        }
                     }
                 },
 
                 // Categories
-                categories: [101, 105, 110], // Apparel, T-Shirts, Graphic Tees
+                categories: [101, 105, 110], // Computers, Laptops, Gaming
 
                 // Related Products
-                upselling: [2510, 2515], // Premium hoodie, long sleeve version
-                crossSelling: [2601, 2701], // Joggers, hat with matching designs
-                relatedProducts: [2502, 2503], // Other t-shirt designs
+                upselling: [3005, 3010], // Premium laptop models
+                crossSelling: [3101, 3201], // Gaming peripherals, laptop accessories
+                relatedProducts: [3002, 3003], // Other gaming laptops
 
                 // Timestamps
-                createdAt: "2025-02-15T10:20:00Z",
-                updatedAt: "2025-04-01T16:45:00Z"
+                createdAt: "2025-01-05T09:00:00Z",
+                updatedAt: "2025-04-02T11:45:00Z"
             },
 
-            // Product state
-            selectedSize: "m",
-            selectedColor: "white",
-            selectedDesign: "mountain",
-            selectedImage: '',
+            productCore: null,
             isScrollLeftEnd: true,
             isScrollRightEnd: false,
-            isOnSale: false,
 
             // Image zoom properties
             zoomed: false,
@@ -461,88 +780,216 @@
             imgStyle: '',
 
             init() {
-                // Set initial selected image
-                this.selectedImage = this.product.images[0];
+                this.productCore = new ProductViewCore(this.productData);
 
                 // Initialize zoom features
                 this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
                 this.imgStyle = 'transform: scale(1); transform-origin: 50% 50%;';
+
+                // Initialize scroll position checker after DOM is loaded
+                this.$nextTick(() => {
+                    this.checkScrollPosition();
+                });
+            },
+
+            // Format currency
+            formatPrice(price) {
+                return '$' + parseFloat(price).toFixed(2);
+            },
+
+            // Format option name
+            formatOptionName(name) {
+                return name.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+            },
+
+            // Format feature key
+            formatFeatureKey(key) {
+                return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+            },
+
+            // Format variant name
+            formatVariantName(variant) {
+                return variant
+                    .split('|')
+                    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' + ');
+            },
+
+            // Select image and corresponding option
+            selectImageAndOption(image, optionType, optionValue) {
+                this.productCore.selectImage(image);
+                this.productCore.selectOptionFromImage(optionType, optionValue);
+            },
+
+            // Select image and corresponding variant
+            selectImageAndVariant(image, variantKey) {
+                this.productCore.selectImage(image);
+                this.productCore.selectVariantFromKey(variantKey);
+            },
+
+            // Select option and scroll to its thumbnail
+            selectOption(option, value) {
+                this.productCore.selectOption(option, value);
+                this.scrollToOptionThumbnail(option, value);
+            },
+
+            // Scroll to the thumbnail for the selected option
+            scrollToOptionThumbnail(option, value) {
+                this.$nextTick(() => {
+                    // First check for option-specific image
+                    let image = this.productCore.getImageForOption(option, value);
+                    let thumbnailSelector = null;
+
+                    if (image) {
+                        // Find thumbnail with matching option and value
+                        thumbnailSelector = `[data-thumbnail-type="option"][data-option-type="${option}"][data-option-value="${value}"]`;
+                    } else {
+                        // Try to find a variant image that includes this option value
+                        // Build the current options
+                        const currentOptions = {...this.productCore.selectedOptions};
+
+                        // For each variant image, check if it matches our selection
+                        for (const variantKey in this.productData.variant_images) {
+                            const parts = variantKey.split('|');
+                            const optionNames = Object.keys(this.productData.options);
+
+                            let matchesSelection = true;
+                            let includesThisOption = false;
+
+                            for (let i = 0; i < Math.min(parts.length, optionNames.length); i++) {
+                                // Check if this part of the variant matches our selected option
+                                if (optionNames[i] === option && parts[i] === value) {
+                                    includesThisOption = true;
+                                }
+
+                                // Check if all other options match our current selection
+                                if (optionNames[i] !== option && currentOptions[optionNames[i]] !== parts[i]) {
+                                    matchesSelection = false;
+                                }
+                            }
+
+                            if (includesThisOption && matchesSelection) {
+                                // This variant matches our selection
+                                thumbnailSelector = `[data-thumbnail-type="variant"][data-variant-key="${variantKey}"]`;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If we found a selector, scroll to it
+                    if (thumbnailSelector) {
+                        const thumbnail = this.$refs.thumbnailsContainer.querySelector(thumbnailSelector);
+                        if (thumbnail) {
+                            thumbnail.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
+                    }
+                });
+            },
+
+            // Thumbnail scrolling
+            scrollThumbnails(direction) {
+                const container = this.$refs.thumbnailsContainer;
+                if (!container) return;
+
+                const scrollAmount = container.clientWidth * 0.75;
+                if (direction === 'left') {
+                    container.scrollLeft -= scrollAmount;
+                } else {
+                    container.scrollLeft += scrollAmount;
+                }
 
                 this.$nextTick(() => {
                     this.checkScrollPosition();
                 });
             },
 
-            // Image zoom functions for desktop
+            // Check scroll position
+            checkScrollPosition() {
+                const container = this.$refs.thumbnailsContainer;
+                if (!container) return;
+
+                this.isScrollLeftEnd = container.scrollLeft <= 0;
+                this.isScrollRightEnd =
+                    container.scrollLeft + container.clientWidth >=
+                    container.scrollWidth - 5;
+            },
+
+            // Image zoom functionality for desktop
+            mouseEnter(e) {
+                if (this.isTouchDevice) return;
+                this.zoomed = true;
+                this.scale = 2;
+                this.mouseMove(e);
+            },
+
             mouseMove(e) {
-                if (!this.zoomed && !this.isTouchDevice) return;
+                if (!this.zoomed || this.isTouchDevice) return;
+
                 const img = this.$refs.mainImage;
+                if (!img) return;
+
                 const rect = img.getBoundingClientRect();
                 const x = ((e.clientX - rect.left) / rect.width) * 100;
                 const y = ((e.clientY - rect.top) / rect.height) * 100;
+
                 this.origin = `${x}% ${y}%`;
                 this.updateZoomStyle();
             },
 
-            mouseEnter(e) {
-                if (this.isTouchDevice) return;
-                this.zoomed = true;
-                this.mouseMove(e);
-            },
-
             mouseLeave() {
                 if (this.isTouchDevice) return;
-                this.zoomed = false;
                 this.resetZoom();
             },
 
-            // Image zoom functions for mobile
+            // Image zoom functionality for mobile devices
             touchStart(e) {
                 const now = Date.now();
+
+                // Ignore multi-touch events
                 if (e.touches.length > 1) return;
 
-                if (now - this.lastTap < 350) {
-                    // Double tap detected
-                    if (!this.zoomed) {
-                        // Zoom in centered on tap point
+                // Double tap detection
+                if (now - this.lastTap < 300) {
+                    // Toggle zoom state
+                    this.zoomed = !this.zoomed;
+
+                    if (this.zoomed) {
+                        // Zoom in at the tap position
+                        const touch = e.touches[0];
                         const img = this.$refs.mainImage;
                         const rect = img.getBoundingClientRect();
-                        const touch = e.touches[0];
-                        const percentX = (touch.clientX - rect.left) / rect.width;
-                        const percentY = (touch.clientY - rect.top) / rect.height;
-                        this.origin = `${percentX * 100}% ${percentY * 100}%`;
-                        this.zoomed = true;
-                        this.updateZoomStyle();
-                        this.calcPanBounds();
-                    } else {
-                        // Zoom out
-                        this.zoomed = false;
-                        this.panX = 0;
-                        this.panY = 0;
-                        this.resetZoom();
+                        const x = ((touch.clientX - rect.left) / rect.width) * 100;
+                        const y = ((touch.clientY - rect.top) / rect.height) * 100;
+
+                        this.origin = `${x}% ${y}%`;
+                        this.scale = 2.5; // Higher zoom level for mobile
+                        this.setZoomBoundaries();
                     }
-                    this.lastTap = 0;
+
+                    this.updateZoomStyle();
+                    e.preventDefault(); // Prevent default browser behavior
+                }
+
+                this.lastTap = now;
+
+                // Set up for dragging if zoomed
+                if (this.zoomed) {
+                    this.dragging = true;
+                    this.dragStartX = e.touches[0].clientX - this.panX;
+                    this.dragStartY = e.touches[0].clientY - this.panY;
                     e.preventDefault();
-                } else {
-                    // First tap or potential pan start
-                    this.lastTap = now;
-                    if (this.zoomed) {
-                        this.dragging = true;
-                        this.dragStartX = e.touches[0].clientX - this.panX;
-                        this.dragStartY = e.touches[0].clientY - this.panY;
-                    }
                 }
             },
 
             touchMove(e) {
-                if (!this.zoomed || !this.dragging || e.touches.length !== 1) return;
+                if (!this.zoomed || !this.dragging) return;
 
                 const x = e.touches[0].clientX - this.dragStartX;
                 const y = e.touches[0].clientY - this.dragStartY;
 
-                this.calcPanBounds();
-                this.panX = Math.max(this.minPanX, Math.min(this.maxPanX, x));
-                this.panY = Math.max(this.minPanY, Math.min(this.maxPanY, y));
+                // Constrain pan within boundaries
+                this.panX = Math.min(Math.max(x, this.minPanX), this.maxPanX);
+                this.panY = Math.min(Math.max(y, this.minPanY), this.maxPanY);
 
                 this.updateZoomStyle();
                 e.preventDefault();
@@ -552,250 +999,44 @@
                 this.dragging = false;
             },
 
-            // Helper functions for image zoom
-            updateZoomStyle() {
-                if (this.zoomed) {
-                    if (this.isTouchDevice) {
-                        this.imgStyle = `transform: scale(${this.scale}) translate(${this.panX/this.scale}px,${this.panY/this.scale}px); transform-origin: ${this.origin}; touch-action: none;`;
-                    } else {
-                        this.imgStyle = `transform: scale(${this.scale}); transform-origin: ${this.origin};`;
-                    }
-                } else {
-                    this.resetZoom();
-                }
-            },
-
-            resetZoom() {
-                this.imgStyle = 'transform: scale(1); transform-origin: 50% 50%;';
-            },
-
-            calcPanBounds() {
+            // Calculate zoom boundaries
+            setZoomBoundaries() {
                 const img = this.$refs.mainImage;
+                if (!img) return;
+
                 const rect = img.getBoundingClientRect();
-                const moveX = Math.max(0, (rect.width * (this.scale - 1)) / 2);
-                const moveY = Math.max(0, (rect.height * (this.scale - 1)) / 2);
-                this.minPanX = -moveX;
-                this.maxPanX = moveX;
-                this.minPanY = -moveY;
-                this.maxPanY = moveY;
+                const viewportWidth = rect.width;
+                const viewportHeight = rect.height;
+
+                // Calculate maximum pan distances based on the zoom level
+                this.minPanX = -((viewportWidth * this.scale - viewportWidth) / 2);
+                this.maxPanX = -this.minPanX;
+                this.minPanY = -((viewportHeight * this.scale - viewportHeight) / 2);
+                this.maxPanY = -this.minPanY;
             },
 
-            // Original product functions
-            getShippingInfo() {
-                if (this.product.free_shipping) {
-                    return "Free Shipping";
-                }
-                let shippingCost = this.product.base_shipping_cost;
-
-                // Add shipping adjustments based on selected options
-                const sizeKey = `size:${this.selectedSize}`;
-                if (this.product.option_shipping_adjustments[sizeKey]) {
-                    shippingCost += this.product.option_shipping_adjustments[sizeKey];
+            // Update zoom style
+            updateZoomStyle() {
+                if (!this.zoomed) {
+                    this.imgStyle = 'transform: scale(1); transform-origin: 50% 50%;';
+                    return;
                 }
 
-                if (shippingCost <= 0) {
-                    return "Free Shipping";
-                }
-                return `$${shippingCost.toFixed(2)}`;
-            },
-
-            selectSize(size) {
-                this.selectedSize = size;
-                // Update image if needed based on variant
-                this.updateVariantImage();
-            },
-
-            selectColor(color) {
-                this.selectedColor = color;
-                // Find the corresponding image and display it
-                if (this.product.option_images.color[color] && this.product.option_images.color[color].length > 0) {
-                    this.selectedImage = this.product.option_images.color[color][0];
-                    this.$nextTick(() => {
-                        this.scrollToOptionThumbnails('color', color);
-                    });
-                }
-                // Update image if needed based on variant
-                this.updateVariantImage();
-            },
-
-            selectDesign(design) {
-                this.selectedDesign = design;
-                // Find the corresponding image and display it
-                if (this.product.option_images.design[design] && this.product.option_images.design[design].length > 0) {
-                    this.selectedImage = this.product.option_images.design[design][0];
-                    this.$nextTick(() => {
-                        this.scrollToOptionThumbnails('design', design);
-                    });
-                }
-                // Update image if needed based on variant
-                this.updateVariantImage();
-            },
-
-            selectImage(image) {
-                this.selectedImage = image;
-                // Check if image belongs to a specific color
-                for (const color in this.product.option_images.color) {
-                    if (this.product.option_images.color[color].includes(image)) {
-                        this.selectedColor = color;
-                        return;
-                    }
-                }
-                // Check if image belongs to a specific design
-                for (const design in this.product.option_images.design) {
-                    if (this.product.option_images.design[design].includes(image)) {
-                        this.selectedDesign = design;
-                        return;
-                    }
-                }
-                // Check if image belongs to a specific variant
-                for (const key in this.product.variant_images) {
-                    if (Array.isArray(this.product.variant_images[key])) {
-                        if (this.product.variant_images[key].includes(image)) {
-                            this.selectVariantFromKey(key);
-                            return;
-                        }
-                    } else if (this.product.variant_images[key] === image) {
-                        this.selectVariantFromKey(key);
-                        return;
-                    }
-                }
-            },
-
-            selectVariantFromKey(key) {
-                const parts = key.split('|');
-                if (parts.length === 2) {
-                    // For cases like "white|mountain"
-                    this.selectedColor = parts[0];
-                    this.selectedDesign = parts[1];
-                }
-            },
-
-            updateVariantImage() {
-                // Check if there's a specific image for the current color+design combo
-                const variantKey = `${this.selectedColor}|${this.selectedDesign}`;
-                if (this.product.variant_images[variantKey]) {
-                    const variantImage = Array.isArray(this.product.variant_images[variantKey])
-                        ? this.product.variant_images[variantKey][0]
-                        : this.product.variant_images[variantKey];
-                    this.selectedImage = variantImage;
-                }
-            },
-
-            currentStock() {
-                const variantKey = `${this.selectedSize}|${this.selectedColor}|${this.selectedDesign}`;
-                return this.product.option_variants_stock[variantKey] || 0;
-            },
-
-            isVariantAvailable() {
-                return this.currentStock() > 0;
-            },
-
-            isSizeAvailable(size) {
-                // Check if any color/design combination is available with this size
-                return Object.keys(this.product.option_variants_stock).some(key => {
-                    const parts = key.split('|');
-                    return parts[0] === size && this.product.option_variants_stock[key] > 0;
-                });
-            },
-
-            isColorAvailable(color) {
-                // Check if any size/design combination is available with this color
-                return Object.keys(this.product.option_variants_stock).some(key => {
-                    const parts = key.split('|');
-                    return parts[1] === color && this.product.option_variants_stock[key] > 0;
-                });
-            },
-
-            isDesignAvailable(design) {
-                // Check if any size/color combination is available with this design
-                return Object.keys(this.product.option_variants_stock).some(key => {
-                    const parts = key.split('|');
-                    return parts[2] === design && this.product.option_variants_stock[key] > 0;
-                });
-            },
-
-            calculatePrice() {
-                let price = this.product.base_price;
-
-                // Add size price adjustment if applicable
-                const sizeKey = `size:${this.selectedSize}`;
-                if (this.product.option_price_adjustments[sizeKey]) {
-                    price += this.product.option_price_adjustments[sizeKey];
-                }
-
-                // Add color price adjustment if applicable
-                const colorKey = `color:${this.selectedColor}`;
-                if (this.product.option_price_adjustments[colorKey]) {
-                    price += this.product.option_price_adjustments[colorKey];
-                }
-
-                // Add design price adjustment if applicable
-                const designKey = `design:${this.selectedDesign}`;
-                if (this.product.option_price_adjustments[designKey]) {
-                    price += this.product.option_price_adjustments[designKey];
-                }
-
-                return price;
-            },
-
-            formatPrice(price) {
-                return price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-            },
-
-            getColorHex(color) {
-                // Return corresponding hex color code
-                const colorMap = {
-                    'white': '#ffffff',
-                    'black': '#000000',
-                    'navy': '#000080',
-                    'heather gray': '#D3D3D3'
-                };
-                return colorMap[color] || '#cccccc';
-            },
-
-            scrollThumbnails(direction) {
-                const container = this.$refs.thumbnailsContainer;
-                const scrollAmount = container.clientWidth * 0.75;
-
-                if (direction === 'left') {
-                    container.scrollLeft -= scrollAmount;
+                if (this.isTouchDevice && this.dragging) {
+                    this.imgStyle = `transform: scale(${this.scale}) translate(${this.panX / this.scale}px, ${this.panY / this.scale}px); transform-origin: ${this.origin};`;
                 } else {
-                    container.scrollLeft += scrollAmount;
+                    this.imgStyle = `transform: scale(${this.scale}); transform-origin: ${this.origin};`;
                 }
             },
 
-            scrollToOptionThumbnails(optionType, optionValue) {
-                const container = this.$refs.thumbnailsContainer;
-                const thumbnails = container.querySelectorAll('div');
-
-                // Find the first thumbnail of the selected option
-                let targetThumbnail = null;
-                for (let i = 0; i < thumbnails.length; i++) {
-                    const thumbnail = thumbnails[i];
-                    const indicator = thumbnail.querySelector('.option-indicator');
-                    if (indicator && indicator.textContent === optionValue) {
-                        targetThumbnail = thumbnail;
-                        break;
-                    }
-                }
-
-                if (targetThumbnail) {
-                    const containerWidth = container.clientWidth;
-                    const thumbnailLeft = targetThumbnail.offsetLeft;
-                    const thumbnailWidth = targetThumbnail.clientWidth;
-
-                    // Calculate the scroll position to center the thumbnail
-                    const scrollLeft = thumbnailLeft - (containerWidth / 2) + (thumbnailWidth / 2);
-                    container.scrollTo({left: scrollLeft, behavior: 'smooth'});
-                }
-            },
-
-            checkScrollPosition() {
-                const container = this.$refs.thumbnailsContainer;
-                this.isScrollLeftEnd = container.scrollLeft <= 0;
-                this.isScrollRightEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 5;
+            // Reset zoom
+            resetZoom() {
+                this.zoomed = false;
+                this.panX = 0;
+                this.panY = 0;
+                this.updateZoomStyle();
             }
-        }
+        };
     }
 </script>
 </body>
