@@ -2,108 +2,157 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Product Zoom Demo</title>
+    <title>Double Tap Zoom & Pan (Alpine + Tailwind)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0, user-scalable=yes">
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         [x-cloak] { display: none !important; }
-        /* Prevent image selection glitch while zoomed */
-        img { user-select: none; }
+        img { user-select: none; touch-action: none; }
+        /* Prevent image dragging outline */
+        img::-moz-selection,
+        img::selection { background: none; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
 <div
-        x-data="zoomProduct()"
+        x-data="zoomPanImage()"
         x-init="init()"
-        class="max-w-sm w-full bg-white p-6 rounded-lg shadow space-y-4"
-        x-cloak
+        class="max-w-md w-full bg-white p-4 rounded-lg shadow"
 >
-    <h1 class="text-xl font-bold">Simple T-Shirt</h1>
-    <div class="relative overflow-hidden rounded-lg bg-gray-50 border border-gray-200">
-        <div
-                class="flex justify-center items-center"
-                style="height: 350px;"
+    <h2 class="text-lg font-bold mb-2">Double-tap Zoom &amp; Pan Example</h2>
+    <div
+            class="relative overflow-hidden bg-gray-50 border rounded-lg"
+            style="height: 350px;"
+            x-ref="container"
+            @touchstart="handleTouchStart($event)"
+            @touchmove="handleTouchMove($event)"
+            @touchend="handleTouchEnd($event)"
+    >
+        <img
+                x-ref="img"
+                :src="image"
+                alt="Product"
+                class="absolute left-0 top-0 w-full h-full object-contain transition-transform duration-300"
+                :style="imgStyle"
+                draggable="false"
         >
-            <!-- Main Image -->
-            <img
-                    x-ref="mainImage"
-                    :src="image"
-                    alt="Product Image"
-                    class="object-contain h-full transition-transform duration-300 ring-2 ring-indigo-200"
-                    :style="zoomStyle"
-                    @mousemove="!isTouchDevice && zoom($event)"
-                    @mouseenter="!isTouchDevice && zoomIn($event)"
-                    @mouseleave="!isTouchDevice && zoomOut()"
-                    @touchstart="isTouchDevice && toggleZoom($event)"
-            >
-            <!-- Zoom hint (Mobile) -->
-            <div
-                    x-show="isTouchDevice && !isZoomed"
-                    class="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded"
-            >
-                Tap to Zoom
-            </div>
-        </div>
+        <!-- Hint -->
+        <div
+                x-show="!zoomed"
+                class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded"
+                x-cloak
+        >Double-tap to zoom</div>
+        <div
+                x-show="zoomed"
+                class="absolute bottom-2 right-2 bg-indigo-700 text-white text-xs px-2 py-1 rounded"
+                x-cloak
+        >Drag to pan, double-tap to reset</div>
     </div>
-    <div class="text-gray-600">A demo of a zoom-on-hover product image using Alpine.js and Tailwind CSS.</div>
 </div>
 
 <script>
-    function zoomProduct() {
+    function zoomPanImage() {
         return {
             image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&auto=format&fit=crop',
-            isZoomed: false,
-            zoomLevel: 2,
-            origin: '50% 50%',
-            isTouchDevice: false,
-            zoomStyle: '',
+            zoomed: false,
+            scale: 2,
+            curX: 0,
+            curY: 0,
+            minX: 0,
+            minY: 0,
+            maxX: 0,
+            maxY: 0,
+            lastX: 0,
+            lastY: 0,
+            startX: 0,
+            startY: 0,
+            lastTap: 0,
+            imgStyle: '',
+            dragging: false,
             init() {
-                // Detect touch device
-                this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                this.resetZoom();
+                this.imgStyle = 'transform: scale(1)';
             },
-            zoom(event) {
-                if (!this.isZoomed) return;
-                const rect = this.$refs.mainImage.getBoundingClientRect();
-                const x = ((event.clientX - rect.left) / rect.width) * 100;
-                const y = ((event.clientY - rect.top) / rect.height) * 100;
-                this.origin = `${x}% ${y}%`;
-                this.setZoom();
-            },
-            zoomIn(event) {
-                this.isZoomed = true;
-                this.zoom(event);
-            },
-            zoomOut() {
-                this.isZoomed = false;
-                this.resetZoom();
-            },
-            toggleZoom(event) {
-                // Mobile tap toggles zoom
-                this.isZoomed = !this.isZoomed;
-                if (this.isZoomed) {
-                    // Set origin based on touch position
-                    const rect = this.$refs.mainImage.getBoundingClientRect();
-                    const touch = event.touches[0];
-                    const x = ((touch.clientX - rect.left) / rect.width) * 100;
-                    const y = ((touch.clientY - rect.top) / rect.height) * 100;
-                    this.origin = `${x}% ${y}%`;
-                    this.setZoom();
+            handleTouchStart(e) {
+                if (e.touches.length > 1) return; // ignore multi-touch
+                const now = Date.now();
+                const TAP_DELAY = 300; // ms
+
+                if (now - this.lastTap < TAP_DELAY) {
+                    // Detected double-tap
+                    if (!this.zoomed) {
+                        const rect = this.$refs.container.getBoundingClientRect();
+                        const touch = e.touches[0];
+                        const percentX = (touch.clientX - rect.left) / rect.width;
+                        const percentY = (touch.clientY - rect.top) / rect.height;
+
+                        // Center zoom on tapped point
+                        this.curX = (0.5 - percentX) * rect.width * (this.scale - 1);
+                        this.curY = (0.5 - percentY) * rect.height * (this.scale - 1);
+
+                        // Clamp to movement limits
+                        this.calcBounds();
+                        this.curX = Math.max(this.minX, Math.min(this.maxX, this.curX));
+                        this.curY = Math.max(this.minY, Math.min(this.maxY, this.curY));
+
+                        this.zoomed = true;
+                        this.applyTransform();
+                    } else {
+                        // Zoom out on double-tap
+                        this.zoomed = false;
+                        this.curX = 0;
+                        this.curY = 0;
+                        this.applyTransform();
+                    }
+                    this.lastTap = 0; // reset, so not to trigger again
+                    e.preventDefault();
                 } else {
-                    this.resetZoom();
+                    // Not a double-tap
+                    this.lastTap = now;
+                    // Setup for pan
+                    if (this.zoomed) {
+                        this.dragging = true;
+                        this.startX = e.touches[0].clientX - this.curX;
+                        this.startY = e.touches[0].clientY - this.curY;
+                    }
                 }
             },
-            setZoom() {
-                this.zoomStyle = `transform: scale(${this.zoomLevel}); transform-origin: ${this.origin};`;
+            handleTouchMove(e) {
+                if (!this.zoomed || !this.dragging) return;
+                e.preventDefault();
+                const touch = e.touches[0];
+                let x = touch.clientX - this.startX;
+                let y = touch.clientY - this.startY;
+                // Clamp
+                this.calcBounds();
+                this.curX = Math.max(this.minX, Math.min(this.maxX, x));
+                this.curY = Math.max(this.minY, Math.min(this.maxY, y));
+                this.applyTransform();
             },
-            resetZoom() {
-                this.zoomStyle = 'transform: scale(1); transform-origin: 50% 50%;';
+            handleTouchEnd(e) {
+                this.dragging = false;
+            },
+            applyTransform() {
+                this.imgStyle = this.zoomed
+                    ? `transform: scale(${this.scale}) translate(${this.curX/this.scale}px,${this.curY/this.scale}px); touch-action:none;`
+                    : 'transform: scale(1); touch-action:none;';
+            },
+            calcBounds() {
+                // Only allow panning within image bounds
+                const container = this.$refs.container;
+                if (!container) return;
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                const moveX = Math.max(0, (w * (this.scale - 1)) / 2);
+                const moveY = Math.max(0, (h * (this.scale - 1)) / 2);
+                this.minX = -moveX;
+                this.maxX = moveX;
+                this.minY = -moveY;
+                this.maxY = moveY;
             }
         }
     }
 </script>
-
 </body>
 </html>
